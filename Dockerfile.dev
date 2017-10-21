@@ -1,0 +1,6 @@
+FROM node
+
+RUN echo '{ "allow_root": true }' > /root/.bowerrc
+RUN npm install -g serverless
+
+WORKDIR /src
