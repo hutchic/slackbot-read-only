@@ -24,6 +24,7 @@ provider:
     DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
     SLACK_CLIENT_ID: ${env:SLACK_CLIENT_ID}
     SLACK_CLIENT_SECRET: ${env:SLACK_CLIENT_SECRET}
+    SLACK_ACCESS_TOKEN_VARIABLE: ${self:custome.slack_access_token}
   iamRoleStatements:
     - Effect: 'Allow'
       Action: 'ssm:Decrypt'
@@ -34,7 +35,7 @@ provider:
             - 'arn:aws:ssm'
             - Ref: 'AWS::Region'
             - Ref: 'AWS::AccountId'
-            - 'parameter/access_token'
+            - 'parameter/${self:custome.slack_access_token}'
     - Effect: 'Allow'
       Action: 'ssm:GetParameter'
       Resource:
@@ -44,7 +45,7 @@ provider:
             - 'arn:aws:ssm'
             - Ref: 'AWS::Region'
             - Ref: 'AWS::AccountId'
-            - 'parameter/access_token'
+            - 'parameter/${self:custome.slack_access_token}'
     - Effect: 'Allow'
       Action: 'ssm:PutParameter'
       Resource:
@@ -54,16 +55,12 @@ provider:
             - 'arn:aws:ssm'
             - Ref: 'AWS::Region'
             - Ref: 'AWS::AccountId'
-            - 'parameter/access_token'
-    - Effect: Allow
-      Action:
-        - dynamodb:Query
-        - dynamodb:Scan
-        - dynamodb:GetItem
-        - dynamodb:PutItem
-        - dynamodb:UpdateItem
-        - dynamodb:DeleteItem
-      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+            - 'parameter/${self:custome.slack_access_token}'
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  region: ${opt:region, self:provider.region}
+  slack_access_token: "${self:custom.stage}_access_token"
 
 # you can overwrite defaults here
 #  stage: dev

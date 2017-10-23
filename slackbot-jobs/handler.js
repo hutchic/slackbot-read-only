@@ -36,7 +36,7 @@ module.exports.slackactivate = (event, context, callback) => {
     let json = JSON.parse(body);
     
     let params = {
-      Name: 'access_token',
+      Name: process.env.SLACK_ACCESS_TOKEN_VARIABLE,
       Type: 'SecureString',
       Value: json.access_token,
       Overwrite: true
@@ -86,7 +86,7 @@ module.exports.slackhooks = (event, context, callback) => {
   } else if (requestBody.type == 'event_callback' && requestBody.event.type == 'message') {
     let ssm = new AWS.SSM();
     ssm.getParameter({
-      Name: 'access_token',
+      Name: process.env.SLACK_ACCESS_TOKEN_VARIABLE,
       WithDecryption: true
     }, function(error, data) {
       if (error) {
