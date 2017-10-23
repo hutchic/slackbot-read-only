@@ -17,7 +17,6 @@ module.exports.slackactivate = (event, context, callback) => {
   const request = require('request');  
   const body = 'done';
   const AWS = require('aws-sdk');
-  const dynamoDb = new AWS.DynamoDB.DocumentClient();
   const response = {
     statusCode: 200,
     body: 'done'
@@ -33,16 +32,17 @@ module.exports.slackactivate = (event, context, callback) => {
   };
   
   request.post(options, (error, response, body) => {
+    let ssm = new AWS.SSM();
     let json = JSON.parse(body);
-    let params = {
-      TableName: process.env.DYNAMODB_TABLE,
-      Item: {
-        access_token: json.access_token
-      }
-    };
     
-    dynamoDb.put(params, (error) => {
-      // handle potential errors
+    let params = {
+      Name: 'access_token',
+      Type: 'SecureString',
+      Value: json.access_token,
+      Overwrite: true
+    }
+    
+    ssm.putParameter(params, function(error, data) {
       if (error) {
         console.error(error);
         response.statusCode = 501;
@@ -67,39 +67,51 @@ module.exports.slackactivate = (event, context, callback) => {
           }
         });
       }
-    });
+    })
   });
   callback(null, response);
 };
 
 module.exports.slackhooks = (event, context, callback) => {
   const AWS = require('aws-sdk');
-  const request = require('request');  
-  const dynamoDb = new AWS.DynamoDB.DocumentClient();
+  const request = require('request');
   const requestBody = JSON.parse(event.body);
-  const accessToken = null;
   const response = {
     statusCode: 200
   };
+  let accessToken = null;
   
   if (requestBody.type == 'url_verification') {
     response.body = requestBody.challenge;
   } else if (requestBody.type == 'event_callback' && requestBody.event.type == 'message') {
-    dynamoDb.scan({
-      TableName: process.env.DYNAMODB_TABLE,
-    }, (error, result) => {
-      if(error) {
+    let ssm = new AWS.SSM();
+    ssm.getParameter({
+      Name: 'access_token',
+      WithDecryption: true
+    }, function(error, data) {
+      if (error) {
         console.error(error);
+        response.statusCode = 501;
+        response.body = 'error';
+        callback(error, response);   
       } else {
+        accessToken = data.Parameter.Value;
         request.post({
           url:'https://slack.com/api/chat.delete',
           form: {
-            token:result.Items[0].access_token,
+            token:accessToken,
             channel:requestBody['event'].channel,
             ts:requestBody['event'].ts
           }
+        }, (error, response, body) => {
+          if (error) {
+            console.error(error);
+            response.statusCode = 501;
+            response.body = 'error';
+            callback(error, response);   
+          }
         })
-      }
+      } 
     })
   }
   callback(null, response);
