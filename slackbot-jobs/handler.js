@@ -2,7 +2,7 @@
 
 module.exports.slackinstall = (event, context, callback) => {
   const client_id = process.env.SLACK_CLIENT_ID;
-  const scopes = 'channels:write,channels:read,channels:history,chat:write:user,chat:write:bot';
+  const scopes = 'channels:write,channels:read,channels:history,chat:write:user,chat:write:bot,users:read';
   const requestBody = JSON.parse(event.body);
   const response = {
     statusCode: 302,
@@ -62,7 +62,6 @@ module.exports.slackactivate = (event, context, callback) => {
             response.body = 'error';
             callback(error, response);            
           } else {
-            console.log(body);
             callback(null, response);
           }
         });
@@ -96,12 +95,12 @@ module.exports.slackhooks = (event, context, callback) => {
         callback(error, response);   
       } else {
         accessToken = data.Parameter.Value;
+        
         request.post({
-          url:'https://slack.com/api/chat.delete',
+          url:'https://slack.com/api/users.info',
           form: {
             token:accessToken,
-            channel:requestBody['event'].channel,
-            ts:requestBody['event'].ts
+            user:requestBody['event'].user
           }
         }, (error, response, body) => {
           if (error) {
@@ -109,9 +108,28 @@ module.exports.slackhooks = (event, context, callback) => {
             response.statusCode = 501;
             response.body = 'error';
             callback(error, response);   
+          } else {
+            let json = JSON.parse(body);
+            if (json.user.is_admin != true) {
+              request.post({
+                url:'https://slack.com/api/chat.delete',
+                form: {
+                  token:accessToken,
+                  channel:requestBody['event'].channel,
+                  ts:requestBody['event'].ts
+                }
+              }, (error, response, body) => {
+                if (error) {
+                  console.error(error);
+                  response.statusCode = 501;
+                  response.body = 'error';
+                  callback(error, response);
+                }
+              })
+            }
           }
         })
-      } 
+      }
     })
   }
   callback(null, response);
