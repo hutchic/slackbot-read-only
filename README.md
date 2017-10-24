@@ -1,3 +1,6 @@
+[![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com)
+[![UNLICENSE licensed](https://img.shields.io/badge/license-UNLICENSE-blue.svg)](./LICENSE)
+
 # Read Only Channels
 
 Add this slackbot to your free slack to create a channel that only admins can post into. Any messages
