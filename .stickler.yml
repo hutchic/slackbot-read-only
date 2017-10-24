@@ -2,3 +2,5 @@ files:
   ignore:
     - 'bower_components/*'
     - 'node_modules/*'
+linters:
+    eslint:
