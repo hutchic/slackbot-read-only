@@ -7,7 +7,7 @@ module.exports.slackinstall = (event, context, callback) => {
   const response = {
     statusCode: 302,
     headers: {
-      Location: 'https://slack.com/oauth/authorize?client_id='+process.env.SLACK_CLIENT_ID+'&scope='+scopes+'&redirect_uri=https://164sgxe0mj.execute-api.us-east-1.amazonaws.com/dev/slack/activate'
+      Location: 'https://slack.com/oauth/authorize?client_id='+process.env.SLACK_CLIENT_ID+'&scope='+scopes+'&redirect_uri='+process.env.BASE_URL+'slack/activate'
     }
   };
   callback(null, response);

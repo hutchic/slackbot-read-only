@@ -11,7 +11,7 @@
 #
 # Happy Coding!
 
-service: slackbot-jobs
+service: slackbot-read-only
 
 provider:
   name: aws
@@ -21,6 +21,7 @@ provider:
     SLACK_CLIENT_ID: ${env:SLACK_CLIENT_ID}
     SLACK_CLIENT_SECRET: ${env:SLACK_CLIENT_SECRET}
     SLACK_ACCESS_TOKEN_VARIABLE: ${self:custom.slack_access_token}
+    BASE_URL: { "Fn::Join" : ["", [" https://", { "Ref" : "ApiGatewayRestApi" }, ".execute-api.${self:custom.region}.amazonaws.com/${self:custom.stage}" ] ]  }
   iamRoleStatements:
     - Effect: 'Allow'
       Action: 'ssm:Decrypt'
