@@ -61,17 +61,17 @@ custom:
 
 functions:
   slack_webhook:
-    handler: handler.slackhooks
+    handler: handler.slackHooks
     events:
       - http: POST slack/hooks
 
   slack_install:
-    handler: handler.slackinstall
+    handler: handler.installSlack
     events:
       - http: GET slack/install
 
   slack_activate:
-    handler: handler.slackactivate
+    handler: handler.activateSlack
     events:
       - http: GET slack/activate
 

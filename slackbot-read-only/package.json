@@ -4,8 +4,10 @@
   "description": "",
   "main": "handler.js",
   "dependencies": {
+    "aws-sdk": "^2.140.0",
     "node-fetch": "^1.7.3",
-    "request": "^2.83.0"
+    "request": "^2.83.0",
+    "request-promise-native": "^1.0.5"
   },
   "devDependencies": {},
   "scripts": {
