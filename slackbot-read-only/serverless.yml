@@ -11,7 +11,7 @@
 #
 # Happy Coding!
 
-service: myService
+service: slackbot-read-only
 
 provider:
   name: aws

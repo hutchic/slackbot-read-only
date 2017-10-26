@@ -63,14 +63,15 @@ module.exports.slackactivate = (event, context, callback) => {
           name: "#general"
         }
       });
-    }).then(() => callback(null, response))
+    })
+    .then(() => callback(null, response))
     .catch(error => {
       console.error(error);
       response.statusCode = 501;
       response.body = "error";
       callback(error, response);
     });
-}
+};
 
 module.exports.slackHooks = (event, context, callback) => {
   const ssm = require("aws-sdk").SSM();
