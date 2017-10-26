@@ -74,7 +74,7 @@ module.exports.slackactivate = (event, context, callback) => {
     });
 }
 
-module.exports.slackHooks = (event, context, callback) => {
+module.exports.slackhooks = (event, context, callback) => {
   const ssm = require("aws-sdk").SSM();
   const request = require("request-promise");
   const requestBody = JSON.parse(event.body);
@@ -85,6 +85,7 @@ module.exports.slackHooks = (event, context, callback) => {
 
   if (requestBody.type == "url_verification") {
     response.body = requestBody.challenge;
+    return callback(null, response);
   } else if (
     requestBody.type == "event_callback" &&
     requestBody.event.type == "message"
