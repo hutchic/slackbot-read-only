@@ -18,7 +18,7 @@ module.exports.installSlack = (event, context, callback) => {
         "slack/activate"
     }
   };
-  callback(null, response);
+  return callback(null, response);
 };
 
 module.exports.activateSlack = (event, context, callback) => {
@@ -71,7 +71,7 @@ module.exports.activateSlack = (event, context, callback) => {
       });
     })
     .then(() => callback(null, response))
-    .catch((error) => {
+    .catch(error => {
       console.error(error);
       response.statusCode = 501;
       response.body = "error";
@@ -95,7 +95,7 @@ module.exports.slackHooks = (event, context, callback) => {
     requestBody.event.type == "message"
   )
 
-  new Promise((resolve) => {
+  new Promise(resolve => {
     ssm.getParameter(
       {
         Name: process.env.SLACK_ACCESS_TOKEN_VARIABLE,
@@ -103,55 +103,39 @@ module.exports.slackHooks = (event, context, callback) => {
       },
       resolve
     );
-  }).then((error, data) => {
-    if (error) {
-      console.error(error);
-      response.statusCode = 501;
-      response.body = "error";
-      callback(error, response);
-    } else {
-      accessToken = data.Parameter.Value;
+  })
+  .then((error, data) => {
+    accessToken = data.Parameter.Value;
 
-      request.post(
-        {
-          url: "https://slack.com/api/users.info",
-          form: {
-            token: accessToken,
-            user: requestBody["event"].user
-          }
+    request({
+      uri: "https://slack.com/api/users.info",
+      body: {
+        token: accessToken,
+        user: requestBody["event"].user
+      },
+      json: true
+    });
+  })
+  .then(() => {
+    let json = JSON.parse(body);
+
+    if (json.user.is_admin != true) {
+      request({
+        uri: "https://slack.com/api/chat.delete",
+        body: {
+          token: accessToken,
+          channel: requestBody["event"].channel,
+          ts: requestBody["event"].ts
         },
-        (error, response, body) => {
-          if (error) {
-            console.error(error);
-            response.statusCode = 501;
-            response.body = "error";
-            callback(error, response);
-          } else {
-            let json = JSON.parse(body);
-            if (json.user.is_admin != true) {
-              request.post(
-                {
-                  url: "https://slack.com/api/chat.delete",
-                  form: {
-                    token: accessToken,
-                    channel: requestBody["event"].channel,
-                    ts: requestBody["event"].ts
-                  }
-                },
-                (error, response, body) => {
-                  if (error) {
-                    console.error(error);
-                    response.statusCode = 501;
-                    response.body = "error";
-                    callback(error, response);
-                  }
-                }
-              );
-            }
-          }
-        }
-      );
+        json: true
+      })
+      .then(() => callback(null, response));
     }
+  })
+  .catch(error => {
+    console.error(error);
+    response.statusCode = 501;
+    response.body = "error";
+    callback(error, response);
   });
-  callback(null, response);
 };
