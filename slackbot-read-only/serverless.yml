@@ -64,14 +64,13 @@ functions:
     handler: handler.slackhooks
     events:
       - http: POST slack/hooks
-
   slack_install:
     handler: handler.slackinstall
     events:
       - http: GET slack/install
-
   slack_activate:
     handler: handler.slackactivate
     events:
       - http: GET slack/activate
+
 

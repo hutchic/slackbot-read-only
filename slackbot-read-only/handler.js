@@ -1,137 +1,137 @@
-'use strict';
+"use strict";
 
 module.exports.slackinstall = (event, context, callback) => {
-  const client_id = process.env.SLACK_CLIENT_ID;
-  const scopes = 'channels:write,channels:read,channels:history,chat:write:user,chat:write:bot,users:read';
+  const clientId = process.env.SLACK_CLIENT_ID;
+  const scopes =
+    "channels:write,channels:read,channels:history,chat:write:user,chat:write:bot,users:read";
   const requestBody = JSON.parse(event.body);
   const response = {
     statusCode: 302,
     headers: {
-      Location: 'https://slack.com/oauth/authorize?client_id='+process.env.SLACK_CLIENT_ID+'&scope='+scopes+'&redirect_uri='+process.env.BASE_URL+'slack/activate'
+      Location:
+        "https://slack.com/oauth/authorize?client_id=" +
+        process.env.SLACK_CLIENT_ID +
+        "&scope=" +
+        scopes +
+        "&redirect_uri=" +
+        process.env.BASE_URL +
+        "/slack/activate"
     }
   };
-  callback(null, response);
+  return callback(null, response);
 }
 
 module.exports.slackactivate = (event, context, callback) => {
-  const request = require('request');  
-  const body = 'done';
-  const AWS = require('aws-sdk');
+  const request = require("request-promise");
+  const body = "done";
+  const AWS = require("aws-sdk");
   const response = {
     statusCode: 200,
-    body: 'done'
+    body: "done"
   };
-  
+
   let options = {
-    url:'https://slack.com/api/oauth.access',
+    method: "POST",
+    uri: "https://slack.com/api/oauth.access",
     form: {
-      client_id:process.env.SLACK_CLIENT_ID,
-      client_secret:process.env.SLACK_CLIENT_SECRET,
-      code:event.queryStringParameters.code
-    }
+      client_id: process.env.SLACK_CLIENT_ID,
+      client_secret: process.env.SLACK_CLIENT_SECRET,
+      code: event.queryStringParameters.code
+    },
+    json: true
   };
-  
-  request.post(options, (error, response, body) => {
-    let ssm = new AWS.SSM();
-    let json = JSON.parse(body);
-    
-    let params = {
-      Name: process.env.SLACK_ACCESS_TOKEN_VARIABLE,
-      Type: 'SecureString',
-      Value: json.access_token,
-      Overwrite: true
-    }
-    
-    ssm.putParameter(params, function(error, data) {
-      if (error) {
-        console.error(error);
-        response.statusCode = 501;
-        response.body = 'error';
-        callback(error, response);
-      } else {
-        request.post({
-          url:'https://slack.com/api/channels.join',
-          form: {
-            token:json.access_token,
-            name:'#general'
-          }
-        }, (error, response, body) => {
-          if(error) {
-            console.error(error);
-            response.statusCode = 501;
-            response.body = 'error';
-            callback(error, response);            
-          } else {
-            callback(null, response);
-          }
-        });
-      }
+
+  // OAuth handshake
+  request(options)
+    .then((json) => {
+      let ssm = new AWS.SSM();
+      let params = {
+        Name: process.env.SLACK_ACCESS_TOKEN_VARIABLE,
+        Type: "SecureString",
+        Value: json.access_token,
+        Overwrite: true
+      };
+
+      return new Promise((resolve, reject) => {
+        ssm.putParameter(params, resolve(json));
+      });
+    }).then((json) => {
+      return request({
+        method: "POST",
+        uri: "https://slack.com/api/channels.join",
+        form: {
+          token: json.access_token,
+          name: "#general"
+        }
+      });
     })
-  });
-  callback(null, response);
-};
+    .then(() => callback(null, response))
+    .catch(error => {
+      console.error(error);
+      response.statusCode = 501;
+      response.body = "error";
+      callback(error, response);
+    });
+}
 
 module.exports.slackhooks = (event, context, callback) => {
-  const AWS = require('aws-sdk');
-  const request = require('request');
+  const ssm = require("aws-sdk").SSM();
+  const request = require("request-promise");
   const requestBody = JSON.parse(event.body);
   const response = {
     statusCode: 200
   };
   let accessToken = null;
-  
-  if (requestBody.type == 'url_verification') {
-    response.body = requestBody.challenge;
-  } else if (requestBody.type == 'event_callback' && requestBody.event.type == 'message') {
-    let ssm = new AWS.SSM();
-    ssm.getParameter({
-      Name: process.env.SLACK_ACCESS_TOKEN_VARIABLE,
-      WithDecryption: true
-    }, function(error, data) {
-      if (error) {
-        console.error(error);
-        response.statusCode = 501;
-        response.body = 'error';
-        callback(error, response);   
-      } else {
-        accessToken = data.Parameter.Value;
-        
-        request.post({
-          url:'https://slack.com/api/users.info',
-          form: {
-            token:accessToken,
-            user:requestBody['event'].user
-          }
-        }, (error, response, body) => {
-          if (error) {
-            console.error(error);
-            response.statusCode = 501;
-            response.body = 'error';
-            callback(error, response);   
-          } else {
-            let json = JSON.parse(body);
-            if (json.user.is_admin != true) {
-              request.post({
-                url:'https://slack.com/api/chat.delete',
-                form: {
-                  token:accessToken,
-                  channel:requestBody['event'].channel,
-                  ts:requestBody['event'].ts
-                }
-              }, (error, response, body) => {
-                if (error) {
-                  console.error(error);
-                  response.statusCode = 501;
-                  response.body = 'error';
-                  callback(error, response);
-                }
-              })
-            }
-          }
-        })
-      }
-    })
-  }
-  callback(null, response);
-};
 
+  if (requestBody.type == "url_verification") {
+    response.body = requestBody.challenge;
+    return callback(null, response);
+  } else if (
+    requestBody.type == "event_callback" &&
+    requestBody.event.type == "message"
+  )
+
+  new Promise(resolve => {
+    ssm.getParameter(
+      {
+        Name: process.env.SLACK_ACCESS_TOKEN_VARIABLE,
+        WithDecryption: true
+      },
+      resolve
+    );
+  })
+  .then((error, data) => {
+    accessToken = data.Parameter.Value;
+
+    request({
+      uri: "https://slack.com/api/users.info",
+      body: {
+        token: accessToken,
+        user: requestBody["event"].user
+      },
+      json: true
+    });
+  })
+  .then(() => {
+    let json = JSON.parse(body);
+
+    if (json.user.is_admin != true) {
+      request({
+        uri: "https://slack.com/api/chat.delete",
+        body: {
+          token: accessToken,
+          channel: requestBody["event"].channel,
+          ts: requestBody["event"].ts
+        },
+        json: true
+      })
+      .then(() => callback(null, response));
+    }
+  })
+  .catch(error => {
+    console.error(error);
+    response.statusCode = 501;
+    response.body = "error";
+    callback(error, response);
+  });
+};
