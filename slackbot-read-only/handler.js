@@ -75,7 +75,7 @@ module.exports.slackactivate = (event, context, callback) => {
 }
 
 module.exports.slackhooks = (event, context, callback) => {
-  const ssm = require("aws-sdk").SSM();
+  const AWS = require("aws-sdk");
   const request = require("request-promise");
   const requestBody = JSON.parse(event.body);
   const response = {
@@ -92,12 +92,13 @@ module.exports.slackhooks = (event, context, callback) => {
   )
 
   new Promise(resolve => {
+    let ssm = new AWS.SSM();
     ssm.getParameter(
       {
         Name: process.env.SLACK_ACCESS_TOKEN_VARIABLE,
         WithDecryption: true
       },
-      resolve
+      (error, data) => resolve(error, data)
     );
   })
   .then((error, data) => {
